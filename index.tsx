@@ -49,7 +49,7 @@ export class GdmLiveAudio extends LitElement {
   private availableVoices = ['Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir'];
   private availableLanguages = [
     {name: 'English (US)', value: 'en-US'},
-    {name: 'Traditional Chinese (TW)', value: 'zh-TW'},
+    {name: 'Mandarin (Taiwan)', value: 'zh-TW'},
     {name: 'Japanese (JP)', value: 'ja-JP'},
   ];
   private currentInputTranscription = '';
@@ -394,7 +394,8 @@ ${this.fileContent}
     }
 
     if (this.selectedLanguage === 'zh-TW') {
-      systemInstruction += '\n\nPlease respond in Traditional Chinese (zh-TW).';
+      systemInstruction +=
+        '\n\nPlease respond in Traditional Chinese (zh-TW) with a standard Taiwanese Mandarin accent.';
     } else if (this.selectedLanguage === 'ja-JP') {
       systemInstruction += '\n\nPlease respond in Japanese (ja-JP).';
     }

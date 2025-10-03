@@ -242,8 +242,7 @@ export class GdmLiveAudioVisuals3D extends LitElement {
   }
 
   protected firstUpdated() {
-    // FIX: Use `this.renderRoot` to query for the canvas element, which is the idiomatic way in Lit.
-    // FIX: Replaced `this.renderRoot` with `this.shadowRoot!` to fix property not found error.
+    // FIX: Use `this.shadowRoot` to access the component's shadow DOM. `renderRoot` is a protected property and caused a build error.
     this.canvas = this.shadowRoot!.querySelector('canvas')!;
     this.init();
   }

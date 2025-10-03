@@ -29,6 +29,7 @@ export class GdmLiveAudio extends LitElement {
   @state() fileName = '';
   @state() fileContent = '';
   @state() conversation: ConversationEntry[] = [];
+  @state() liveConversation: ConversationEntry[] = [];
   @state() isModelThinking = false;
   @state() private browserVoices: SpeechSynthesisVoice[] = [];
 
@@ -46,14 +47,20 @@ export class GdmLiveAudio extends LitElement {
   private sourceNode: AudioBufferSourceNode;
   private scriptProcessorNode: ScriptProcessorNode;
   private sources = new Set<AudioBufferSourceNode>();
-  private availableVoices = ['Zephyr', 'Puck', 'Charon', 'Kore', 'Fenrir'];
+  private availableVoices = [
+    'Zephyr',
+    'Puck',
+    'Charon',
+    'Kore',
+    'Fenrir',
+    'Nova',
+    'Orion',
+  ];
   private availableLanguages = [
     {name: 'English (US)', value: 'en-US'},
     {name: 'Mandarin (Taiwan)', value: 'zh-TW'},
     {name: 'Japanese (JP)', value: 'ja-JP'},
   ];
-  private currentInputTranscription = '';
-  private currentOutputTranscription = '';
   private conversationPanelRef = createRef<HTMLDivElement>();
 
   static styles = css`
@@ -448,35 +455,45 @@ ${this.fileContent}
             this.sources.add(source);
           }
 
-          if (message.serverContent?.outputTranscription) {
-            this.currentOutputTranscription +=
-              message.serverContent.outputTranscription.text;
+          const outputText = message.serverContent?.outputTranscription?.text;
+          if (typeof outputText === 'string') {
+            const lastEntry =
+              this.liveConversation[this.liveConversation.length - 1];
+            if (lastEntry?.speaker === 'model') {
+              lastEntry.text += outputText;
+              this.liveConversation = [...this.liveConversation];
+            } else {
+              this.liveConversation = [
+                ...this.liveConversation,
+                {speaker: 'model', text: outputText},
+              ];
+            }
           }
-          if (message.serverContent?.inputTranscription) {
-            this.currentInputTranscription +=
-              message.serverContent.inputTranscription.text;
+
+          const inputText = message.serverContent?.inputTranscription?.text;
+          if (typeof inputText === 'string') {
+            const lastEntry =
+              this.liveConversation[this.liveConversation.length - 1];
+            if (lastEntry?.speaker === 'user') {
+              lastEntry.text += inputText;
+              this.liveConversation = [...this.liveConversation];
+            } else {
+              this.liveConversation = [
+                ...this.liveConversation,
+                {speaker: 'user', text: inputText},
+              ];
+            }
           }
 
           if (message.serverContent?.turnComplete) {
             this.isModelThinking = false;
-            const newEntries: ConversationEntry[] = [];
-            if (this.currentInputTranscription.trim()) {
-              newEntries.push({
-                speaker: 'user',
-                text: this.currentInputTranscription.trim(),
-              });
-            }
-            if (this.currentOutputTranscription.trim()) {
-              newEntries.push({
-                speaker: 'model',
-                text: this.currentOutputTranscription.trim(),
-              });
-            }
+            const newEntries = this.liveConversation.filter((e) =>
+              e.text.trim(),
+            );
             if (newEntries.length > 0) {
               this.conversation = [...this.conversation, ...newEntries];
             }
-            this.currentInputTranscription = '';
-            this.currentOutputTranscription = '';
+            this.liveConversation = [];
 
             if (this.isRecording) {
               this.updateStatus('🔴 Listening...');
@@ -738,11 +755,13 @@ ${this.fileContent}
       const voiceVariations =
         this.selectedLanguage === 'zh-TW'
           ? [
-              {pitch: 1, rate: 1}, // Zephyr: Normal
-              {pitch: 1.4, rate: 1.2}, // Puck: Higher and faster
-              {pitch: 0.6, rate: 0.8}, // Charon: Lower and slower
-              {pitch: 1.2, rate: 1.05}, // Kore: Slightly higher pitch, normal speed
-              {pitch: 0.5, rate: 0.9}, // Fenrir: Very deep and slightly slower
+              {pitch: 1, rate: 1}, // Zephyr
+              {pitch: 1.4, rate: 1.2}, // Puck
+              {pitch: 0.6, rate: 0.8}, // Charon
+              {pitch: 1.2, rate: 1.05}, // Kore
+              {pitch: 0.5, rate: 0.9}, // Fenrir
+              {pitch: 1.1, rate: 1}, // Nova
+              {pitch: 0.7, rate: 0.9}, // Orion
             ]
           : this.selectedLanguage === 'ja-JP'
           ? [
@@ -751,13 +770,17 @@ ${this.fileContent}
               {pitch: 0.8, rate: 0.9}, // Charon
               {pitch: 1.1, rate: 1}, // Kore
               {pitch: 0.7, rate: 1}, // Fenrir
+              {pitch: 1.05, rate: 1}, // Nova
+              {pitch: 0.8, rate: 0.95}, // Orion
             ]
           : [
-              {pitch: 1, rate: 1}, // Zephyr: Baseline, clear
-              {pitch: 1.1, rate: 1.05}, // Puck: Higher pitch, slightly faster
-              {pitch: 0.9, rate: 0.95}, // Charon: Lower pitch, slightly slower
-              {pitch: 1, rate: 1.15}, // Kore: Normal pitch but noticeably faster
-              {pitch: 0.8, rate: 1}, // Fenrir: Deep pitch, normal speed
+              {pitch: 1, rate: 1}, // Zephyr
+              {pitch: 1.1, rate: 1.05}, // Puck
+              {pitch: 0.9, rate: 0.95}, // Charon
+              {pitch: 1, rate: 1.15}, // Kore
+              {pitch: 0.8, rate: 1}, // Fenrir
+              {pitch: 1.05, rate: 1}, // Nova
+              {pitch: 0.85, rate: 0.95}, // Orion
             ];
 
       const variation =
@@ -766,9 +789,24 @@ ${this.fileContent}
       utterance.rate = variation.rate;
 
       if (voicesForLanguage.length > 0) {
-        // Cycle through the available browser voices as well for more variety
-        const browserVoiceIndex = selectedVoiceIndex % voicesForLanguage.length;
-        utterance.voice = voicesForLanguage[browserVoiceIndex];
+        // For Chinese, try to find a more natural-sounding voice.
+        if (this.selectedLanguage === 'zh-TW') {
+          // Prioritize Google voices if available.
+          let selectedBrowserVoice = voicesForLanguage.find((voice) =>
+            voice.name.includes('Google'),
+          );
+          // Fallback to the first available voice for the language.
+          if (!selectedBrowserVoice) {
+            selectedBrowserVoice = voicesForLanguage[0];
+          }
+          utterance.voice = selectedBrowserVoice;
+        } else {
+          // Original logic for other languages:
+          // Cycle through the available browser voices as well for more variety
+          const browserVoiceIndex =
+            selectedVoiceIndex % voicesForLanguage.length;
+          utterance.voice = voicesForLanguage[browserVoiceIndex];
+        }
       } else if (this.browserVoices.length > 0) {
         console.warn(
           `No sample voices found for language: ${this.selectedLanguage}. Using default.`,
@@ -782,7 +820,12 @@ ${this.fileContent}
   }
 
   updated(changedProperties: Map<string | symbol, unknown>) {
-    if ( (changedProperties.has('conversation') || changedProperties.has('isModelThinking')) && this.conversationPanelRef.value) {
+    if (
+      (changedProperties.has('conversation') ||
+        changedProperties.has('isModelThinking') ||
+        changedProperties.has('liveConversation')) &&
+      this.conversationPanelRef.value
+    ) {
       const panel = this.conversationPanelRef.value;
       const content = panel.querySelector('.conversation-content');
       if (content) {
@@ -822,7 +865,15 @@ ${this.fileContent}
                 </div>
               `,
             )}
-            ${this.isModelThinking
+            ${this.liveConversation.map(
+              (entry) => html`
+                <div class="message ${entry.speaker}">
+                  <p>${entry.text}</p>
+                </div>
+              `,
+            )}
+            ${this.isModelThinking &&
+            !this.liveConversation.some((e) => e.speaker === 'model' && e.text.trim())
               ? html`
                   <div class="message model thinking">
                     <div class="dot"></div>

@@ -4,7 +4,6 @@
 */
 import {Blob} from '@google/genai';
 
-// FIX: Add type annotation for `bytes` parameter.
 function encode(bytes: Uint8Array) {
   let binary = '';
   const len = bytes.byteLength;
@@ -14,7 +13,6 @@ function encode(bytes: Uint8Array) {
   return btoa(binary);
 }
 
-// FIX: Add type annotation for `base64` parameter.
 function decode(base64: string) {
   const binaryString = atob(base64);
   const len = binaryString.length;
@@ -39,7 +37,6 @@ function createBlob(data: Float32Array): Blob {
   };
 }
 
-// FIX: Use the recommended implementation for decoding raw PCM audio data, which is more efficient.
 async function decodeAudioData(
   data: Uint8Array,
   ctx: AudioContext,

@@ -101,17 +101,14 @@ export class GdmLiveAudioVisuals extends LitElement {
     requestAnimationFrame(() => this.visualize());
   }
 
-  // FIX: LitElement lifecycle methods must be `protected` to correctly override the base class.
   protected firstUpdated() {
-    // FIX: Use `this.renderRoot` to query for the canvas element, which is the idiomatic way in Lit. The non-null assertion on `getContext('2d')` is for type safety.
-    // FIX: Replaced `this.renderRoot` with `this.shadowRoot!` to fix property not found error.
+    // FIX: Use `this.shadowRoot` to access the component's shadow DOM. `renderRoot` is a protected property and caused a build error.
     this.canvas = this.shadowRoot!.querySelector('canvas')!;
     this.canvas.width = 400;
     this.canvas.height = 400;
     this.canvasCtx = this.canvas.getContext('2d')!;
   }
 
-  // FIX: LitElement lifecycle methods must be `protected` to correctly override the base class.
   protected render() {
     return html`<canvas></canvas>`;
   }

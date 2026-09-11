@@ -81,6 +81,40 @@ The `initSession` function in `index.tsx` constructs the system prompt. When a f
 
 You can further customize the AI's behavior by modifying the `systemInstruction` string in the `initSession` function. For example, you could add instructions about the AI's personality, the desired level of detail in its responses, or specific topics to focus on.
 
+### File Upload and Context Conversion
+
+When a user uploads a file, the application converts it into text that can be used as context for the Gemini Live API. Here's how it works:
+
+1.  **File Handling:** The `handleFileChange` function in `index.tsx` is triggered when a user selects a file. It supports `.txt`, `.md`, and `.pdf` files.
+2.  **Text Extraction:**
+    *   For `.txt` and `.md` files, the text is extracted directly using the `file.text()` method.
+    *   For `.pdf` files, the `extractTextFromPdf` function uses the [PDF.js](https://mozilla.github.io/pdf.js/) library to parse the PDF and extract the text content from each page.
+3.  **Context Injection:** The extracted text is stored in the `fileContent` state variable. The `initSession` function then incorporates this text into the `systemInstruction` that is sent to the Gemini Live API. This provides the AI with the necessary context to answer questions about the document.
+
+### Implementing a System Prompt
+
+A system prompt is a way to give the AI instructions or a personality before the conversation begins. In this project, the system prompt is implemented in the `initSession` function in `index.tsx`.
+
+The `systemInstruction` variable is a string that contains the instructions for the AI. This is where you can define the AI's role, its personality, and how it should respond.
+
+For example, the default system prompt is:
+
+```typescript
+`You are an AI assistant in a real-time voice conversation. It is a simple turn-based exchange: the user speaks, and then you speak. Your turn begins IMMEDIATELY after the user stops talking. Silence from the user is your cue to start. You MUST respond. Keep the conversation flowing.`
+```
+
+When a file is uploaded, the system prompt is updated to include the file's content:
+
+```typescript
+`You are an expert on the provided document in a real-time voice conversation. It is a simple turn-based exchange: the user asks a question about the document, and then you answer. Your turn begins IMMEDIATELY after the user stops talking. Silence from the user is your cue to start. You MUST respond based ONLY on the document. If the answer isn't in the document, say so. Keep the conversation flowing.
+
+---DOCUMENT---
+${this.fileContent}
+---END DOCUMENT---`
+```
+
+By modifying the `systemInstruction` string, you can customize the AI's behavior to fit your specific needs.
+
 ## Environment Setup
 
 To run this project, you need to set up your Google Generative AI API key. This is done by creating a `.env` file in the root of the project.
